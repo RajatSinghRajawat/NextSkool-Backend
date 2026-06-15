@@ -15,8 +15,11 @@ connectDB();
 
 // Routes
 const courseRoutes = require("./src/routes/courseRoutes");
+const studentRoutes = require("./src/routes/studentRoutes");
 
 app.use("/api/courses", courseRoutes);
+app.use("/api/students", studentRoutes);
+
 
 const PORT = process.env.PORT || 5000;
 
