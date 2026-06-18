@@ -1,22 +1,27 @@
 const mongoose = require('mongoose');
 
 
-const fileds = mongoose.Schema({
+const fileds = new mongoose.Schema({
     user_name: {
         type: String,
-        unique: true,
-        required: true
+        required: true,
+        trim: true,
     },
     email: {
         type: String,
+        required: true,
         unique: true,
-        required: true
+        lowercase: true,
+        trim: true
     },
     password: {
         type: String,
         required: true
     }
-});
+}, {
+    timestamps: true,
+}
+);
 
 
 const Auth = mongoose.model("User_Authentication", fileds);
