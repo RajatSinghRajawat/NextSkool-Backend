@@ -73,7 +73,7 @@ const deleteLead = async (req, res) => {
             return res.status(400).json({ message: 'Invalid lead ID' });
         }
         const deletedLead = await Lead.findByIdAndDelete(req.params.id);
-        console.log(deleteLead);
+        console.log(deletedLead);
         
         if (!deletedLead) {
             return res.status(404).json({ message: 'Lead not found' });
