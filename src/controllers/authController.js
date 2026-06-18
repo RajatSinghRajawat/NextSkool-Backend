@@ -1,63 +1,152 @@
-const { Auth } = require("../models/User");
-const bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken')
+const User = require("../models/User");
+const Student = require("../models/students");
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
+// Email regex helper
+const validateEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
 
 const register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
+        
+        // Validation
         if (!name || !email || !password) {
-            res.status(422).json('All fields are required, Please fill all the fields.')
+            return res.status(400).json({ 
+                success: false, 
+                message: 'All fields (name, email, password) are required.' 
+            });
         }
 
+        if (name.trim().length < 2) {
+            return res.status(400).json({
+                success: false,
+                message: 'Name must be at least 2 characters long.'
+            });
+        }
+
+        if (!validateEmail(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a valid email address.'
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long.'
+            });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'A user with this email already exists.' 
+            });
+        }
+
+        // Hash password
         const hash_password = await bcrypt.hash(password, 10);
 
-        const user = await Auth.create({
-            name,
-            email,
-            password: hash_password
+        // Create User
+        const user = await User.create({
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            password: hash_password,
+            role: 'student'
         });
 
-        if (user) {
-            const token = await jwt.sign({ id: user._id }, 'Secret_Key', { expireIn: '1d' });
-        }
+        // Create the linked Student profile in database
+        const student = await Student.create({
+            userId: user._id,
+            FullName: name.trim(),
+            Email: email.trim().toLowerCase(),
+            MobileNumber: "" // Initially empty, can be updated later by student
+        });
 
-        res.status(201).json({ message: 'User Registered Successfully.', user, token });
+        // Sign JWT Token
+        const token = jwt.sign(
+            { id: user._id, role: user.role }, 
+            process.env.JWT_SECRET || 'Secret_Key', 
+            { expiresIn: '1d' }
+        );
+
+        // Exclude password from the returned user details
+        const userResponse = user.toObject();
+        delete userResponse.password;
+
+        return res.status(201).json({ 
+            success: true, 
+            message: 'User Registered Successfully.', 
+            user: userResponse, 
+            student,
+            token 
+        });
     } catch (error) {
-        res.status(500).json(error)
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
-
 
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email || !password) {
-            res.status(422).json('All fields are required, Please fill all the fields.')
+            return res.status(422).json({ 
+                success: false, 
+                message: 'All fields are required. Please fill all the fields.' 
+            });
         }
 
-        const user = Auth.find({ email });
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid email or password.' 
+            });
+        }
         
-        const verifing_Password = await bcrypt.compare(password, user.password);
-
-        if (verifing_Password) {
-            const token = await jwt.sign({ id: user._id }, 'Secret_Key', { expireIn: '1h' });
+        const verifying_Password = await bcrypt.compare(password, user.password);
+        if (!verifying_Password) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid email or password.' 
+            });
         }
 
-        res.status(200).json({ message: 'User Registered Successfully.', user });
+        const token = jwt.sign(
+            { id: user._id, role: user.role }, 
+            process.env.JWT_SECRET || 'Secret_Key', 
+            { expiresIn: '1d' }
+        );
+
+        const userResponse = user.toObject();
+        delete userResponse.password;
+
+        return res.status(200).json({ 
+            success: true, 
+            message: 'User Logged In Successfully.', 
+            user: userResponse, 
+            token 
+        });
     } catch (error) {
-        res.status(500).json(error)
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
-
 
 const logout = async (req, res) => {
     try {
-        jwt.sign({ expireIn: null });
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Logged out successfully.' 
+        });
     } catch (error) {
-        res.status(500).json(error)
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
-
-module.exports = { register, login, logout };
+module.exports = { register, login, logout };

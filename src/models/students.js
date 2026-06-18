@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 const studentSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+
   FullName: {
     type: String,
     required: true
@@ -13,8 +19,9 @@ const studentSchema = new mongoose.Schema({
 
   MobileNumber: {
     type: String,
-    required: true
+    required: false
   },
+
 
 
   ProfileImage: {

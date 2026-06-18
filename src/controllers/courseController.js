@@ -4,6 +4,9 @@ const Course = require("../models/Course");
 // Create Course
 const createCourse = async (req, res) => {
   try {
+    if (req.file) {
+      req.body.CourseImage = `/public/uploads/${req.file.filename}`;
+    }
     const {
       CourseName,
       Slug,
@@ -129,6 +132,9 @@ const getCourseById = async (req, res) => {
 // Update Course
 const updateCourse = async (req, res) => {
   try {
+    if (req.file) {
+      req.body.CourseImage = `/public/uploads/${req.file.filename}`;
+    }
     const course = await Course.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
